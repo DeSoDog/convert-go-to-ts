@@ -9,12 +9,16 @@ import (
 	"testing"
 	"time"
 
+	chainlib "github.com/btcsuite/btcd/blockchain"
+	muxtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
+
 	"github.com/DataDog/datadog-go/statsd"
 	"github.com/btcsuite/btcd/addrmgr"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
+	"github.com/deso-protocol/core/lib"
 	"github.com/deso-protocol/go-deadlock"
 	merkletree "github.com/deso-protocol/go-merkle-tree"
 	"github.com/dgraph-io/badger"
@@ -24,8 +28,6 @@ import (
 	"github.com/kevinburke/twilio-go"
 	"honnef.co/go/tools/config"
 )
-
-
 
 
 
@@ -83,6 +85,7 @@ type APIBlockResponse struct {
 	// Blank if successful. Otherwise, contains a description of the
 	// error that occurred.
 	Error string
+	
 
 	// The information contained in the block’s header.
 	Header *HeaderResponse
@@ -145,11 +148,11 @@ type APINodeInfoResponse struct {
 
 
 type APIServer struct {
-	backendServer *Server
-	mempool       *DeSoMempool
-	blockchain    *Blockchain
-	blockProducer *DeSoBlockProducer
-	Params        *DeSoParams
+	backendServer Server
+	mempool       DeSoMempool
+	blockchain    Blockchain
+	blockProducer DeSoBlockProducer
+	Params        DeSoParams
 	Config        *config.Config
 
 	MinFeeRateNanosPerKB uint64
@@ -157,7 +160,7 @@ type APIServer struct {
 	// A pointer to the router that handles all requests.
 	router *muxtrace.Router
 
-	TXIndex *TXIndex
+	TXIndex TXIndex
 
 	// Used for getting/setting the global state. Usually either a db is set OR
 	// a remote node is set-- not both. When a remote node is set, global state
@@ -195,11 +198,11 @@ type APIServer struct {
 	HotFeedBlockHeight uint32
 	// Map of whitelisted post hashes used for serving the hot feed.
 	// The float64 value is a multiplier than can be modified and used in scoring.
-	HotFeedApprovedPostsToMultipliers             map[BlockHash]float64
+	HotFeedApprovedPostsToMultipliers             map[lib.BlockHash]float64
 	LastHotFeedApprovedPostOpProcessedTstampNanos uint64
 	// Multipliers applied to individual PKIDs to help node operators better fit their
 	// hot feed to the type of content they would like to display.
-	HotFeedPKIDMultipliers                          map[PKID]*HotFeedPKIDMultiplier
+	HotFeedPKIDMultipliers                          map[lib.PKID]*HotFeedPKIDMultiplier
 	LastHotFeedPKIDMultiplierOpProcessedTstampNanos uint64
 	// Constants for the hotness score algorithm.
 	HotFeedInteractionCap        uint64
@@ -207,8 +210,8 @@ type APIServer struct {
 	HotFeedPostMultiplierUpdated bool
 	HotFeedPKIDMultiplierUpdated bool
 
-	//Map of transaction type to []*DeSoOutput that represent fees assessed on each transaction of that type.
-	TransactionFeeMap map[TxnType][]*DeSoOutput
+	//Map of transaction type to []DeSoOutput that represent fees assessed on each transaction of that type.
+	TransactionFeeMap map[lib.TxnType][]DeSoOutput
 
 	// Map of public keys that are exempt from node fees
 	ExemptPublicKeyMap map[string]interface{}
@@ -217,10 +220,10 @@ type APIServer struct {
 
 	// VerifiedUsernameToPKIDMap is a map of lowercase usernames to PKIDs representing the current state of
 	// verifications this node is recognizing.
-	VerifiedUsernameToPKIDMap map[string]*PKID
+	VerifiedUsernameToPKIDMap map[string]PKID
 	// BlacklistedPKIDMap is a map of PKID to a byte slice representing the PKID of a user as the key and the current
 	// blacklist state of that user as the key. If a PKID is not present in this map, then the user is NOT blacklisted.
-	BlacklistedPKIDMap map[PKID][]byte
+	BlacklistedPKIDMap map[lib.PKID][]byte
 	// BlacklistedResponseMap is a map of PKIDs converted to base58-encoded string to a byte slice. This is computed
 	// from the BlacklistedPKIDMap above and is a JSON-encodable version of that map. This map is only used when
 	// responding to requests for this node's blacklist. A JSON-encoded response is easier for any language to digest
@@ -228,14 +231,14 @@ type APIServer struct {
 	BlacklistedResponseMap map[string][]byte
 	// GraylistedPKIDMap is a map of PKID to a byte slice representing the PKID of a user as the key and the current
 	// graylist state of that user as the key. If a PKID is not present in this map, then the user is NOT graylisted.
-	GraylistedPKIDMap map[PKID][]byte
+	GraylistedPKIDMap map[lib.PKID][]byte
 	// GraylistedResponseMap is a map of PKIDs converted to base58-encoded string to a byte slice. This is computed
 	// from the GraylistedPKIDMap above and is a JSON-encodable version of that map. This map is only used when
 	// responding to requests for this node's graylist. A JSON-encoded response is easier for any language to digest
 	// than a gob-encoded one.
 	GraylistedResponseMap map[string][]byte
 	// GlobalFeedPostHashes is a slice of BlockHashes representing the state of posts on the global feed on this node.
-	GlobalFeedPostHashes []*BlockHash
+	GlobalFeedPostHashes []BlockHash
 
 	// Cache of Total Supply and Rich List
 	TotalSupplyNanos  uint64
@@ -381,7 +384,7 @@ type AcceptNFTBidResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 }
 
@@ -420,7 +423,7 @@ type AcceptNFTTransferResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 }
 
@@ -432,6 +435,7 @@ type AcceptNFTTransferTxindexMetadata struct {
 
 
 type AccessLevel int
+
 
 
 type AdminAddExemptPublicKey struct {
@@ -524,7 +528,7 @@ type AdminGetHotFeedUserMultiplierResponse struct {
 
 
 type AdminGetMempoolStatsResponse struct {
-	TransactionSummaryStats map[string]*SummaryStats
+	TransactionSummaryStats map[string]SummaryStats
 }
 
 
@@ -705,7 +709,7 @@ type AdminSetJumioVerifiedRequest struct {
 
 type AdminSetTransactionFeeForTransactionTypeRequest struct {
 	// TransactionType is the type of transaction for which we are setting the fees.
-	TransactionType TxnString
+	TransactionType lib.TxnString
 	// NewTransactionFees is a slice of TransactionFee structs that tells us who should receive a fee and how much
 	// when a transaction of TransactionType is performed.
 	NewTransactionFees []TransactionFee
@@ -876,6 +880,13 @@ type AffectedPublicKey struct {
 }
 
 
+type Alpha3CountryCodeDetails struct {
+	CountryCode string
+	Name        string
+	Alpha3      string
+}
+
+
 type AmplitudeEvent struct {
 	UserId          string                 `json:"user_id"`
 	EventType       string                 `json:"event_type"`
@@ -924,6 +935,7 @@ type AuthorizeDerivedKeyMetadata struct {
 type AuthorizeDerivedKeyOperationType uint8
 
 
+
 type AuthorizeDerivedKeyRequest struct {
 	// The original public key of the derived key owner.
 	OwnerPublicKeyBase58Check string `safeForLogging:"true"`
@@ -955,7 +967,7 @@ type AuthorizeDerivedKeyResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 	TxnHashHex        string
 }
@@ -1131,7 +1143,10 @@ type BlockEvent struct {
 }
 
 
-type BlockHash [HashSizeBytes]byte
+type BlockEventFunc func(event *BlockEvent)
+
+
+type BlockHash [100]byte
 
 
 type BlockNode struct {
@@ -1194,6 +1209,7 @@ type BlockRewardMetadataa struct {
 type BlockStatus uint32
 
 
+
 type BlockTemplateStats struct {
 	// The number of txns in the block template.
 	TxnCount uint32
@@ -1212,7 +1228,7 @@ type BlockTemplateStats struct {
 type Blockchain struct {
 	db                              *badger.DB
 	postgres                        *Postgres
-	timeSource                      chainMedianTimeSource
+	timeSource                      chainlib.MedianTimeSource
 	trustedBlockProducerPublicKeys  map[PkMapKey]bool
 	trustedBlockProducerStartHeight uint64
 	params                          *DeSoParams
@@ -1296,7 +1312,7 @@ type BurnNFTResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 }
 
@@ -1363,7 +1379,7 @@ type BuyOrSellCreatorCoinResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 	TxnHashHex        string
 }
@@ -1378,6 +1394,7 @@ type CFVideoDetailsResponse struct {
 
 
 type ChainType uint8
+
 
 
 type CheckPartyMessagingKeysRequest struct {
@@ -1582,7 +1599,7 @@ type ConnectionManager struct {
 
 	// Keeps track of the network time, which is the median of all of our
 	// peers' time.
-	timeSource chainMedianTimeSource
+	timeSource chainlib.MedianTimeSource
 
 	// Events that can happen to a peer.
 	newPeerChan  chan *Peer
@@ -1618,7 +1635,7 @@ type CountryLevelSignUpBonus struct {
 
 type CountrySignUpBonusResponse struct {
 	CountryLevelSignUpBonus CountryLevelSignUpBonus
-	CountryCodeDetails      countries.Alpha3CountryCodeDetails
+	CountryCodeDetails      Alpha3CountryCodeDetails
 }
 
 
@@ -1637,7 +1654,7 @@ type CreateFollowTxnStatelessResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 }
 
@@ -1657,7 +1674,7 @@ type CreateLikeStatelessResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 }
 
@@ -1684,7 +1701,7 @@ type CreateNFTBidResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 }
 
@@ -1727,7 +1744,7 @@ type CreateNFTResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 }
 
@@ -1770,6 +1787,7 @@ type CreatorCoinMetadataa struct {
 
 
 type CreatorCoinOperationType uint8
+
 
 
 type CreatorCoinTransferMetadataa struct {
@@ -1840,6 +1858,7 @@ type DAOCoinMetadata struct {
 type DAOCoinOperationType uint8
 
 
+
 type DAOCoinOperationTypeString string
 
 
@@ -1872,7 +1891,7 @@ type DAOCoinResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 	TxnHashHex        string
 }
@@ -2053,9 +2072,6 @@ type DeSoMempool struct {
 	// temp badger db instances and dump mempool txns to them.
 	dataDir string
 }
-
-
-type DeSoMessage int
 
 
 type DeSoMessage interface {
@@ -2309,9 +2325,6 @@ type DeSoParams struct {
 }
 
 
-type DeSoTxnMetadata int
-
-
 type DeSoTxnMetadata interface {
 	ToBytes(preSignature bool) ([]byte, error)
 	FromBytes(data []byte) error
@@ -2434,7 +2447,7 @@ type ExchangeBitcoinRequest struct {
 	// We rely on the frontend to query the API and give us the response.
 	// Doing it this way makes it so that we don't exhaust our quota on the
 	// free tier.
-	LatestBitcionAPIResponse *BlockCypherAPIFullAddressResponse
+	LatestBitcionAPIResponse BlockCypherAPIFullAddressResponse
 	// The Bitcoin address we will be processing this transaction for.
 	BTCDepositAddress string `safeForLogging:"true"`
 
@@ -2471,6 +2484,9 @@ type ExpectedResponse struct {
 }
 
 
+type ExtraDataDecoder func([]byte, DeSoParams)
+
+
 type FilterAuditLog struct {
 	// Time at which the filter status was granted or removed.
 	TimestampNanos uint64
@@ -2478,16 +2494,17 @@ type FilterAuditLog struct {
 	Filter FilterType
 	// Username and PKID of the admin who filtered the user.
 	UpdaterUsername string
-	UpdaterPKID     *PKID
+	UpdaterPKID     PKID
 	// The user who was filtered or had their filter removed.
 	UpdatedUsername string
-	UpdatedPKID     *PKID
+	UpdatedPKID     PKID
 	// Indicator of whether this request granted the filter status or removed it.
 	IsRemoval bool
 }
 
 
 type FilterType uint32
+
 
 
 type FollowEntry struct {
@@ -2671,7 +2688,7 @@ type GetAppStateResponse struct {
 	// Address to which we want to send ETH when used to buy DESO
 	BuyETHAddress string
 
-	Nodes map[uint64]DeSoNode
+	Nodes map[uint64]lib.DeSoNode
 
 	USDCentsPerBitCloutExchangeRate uint64 // Deprecated
 	JumioBitCloutNanos              uint64 // Deprecated
@@ -2713,15 +2730,13 @@ type GetBlockTemplateResponse struct {
 	DifficultyTargetHex string
 
 	// These fields provide metadata for the admin tab.
-	LatestBlockTemplateStats *BlockTemplateStats
+	LatestBlockTemplateStats BlockTemplateStats
 
 	// TODO: The pool should return a merkle root that proves that the caller's
 	// public key was the one that was included in the BlockRewardMetadata. This
 	// isn't hard to do, and it would make this whole thing trustless, which would
 	// be amazing.
 }
-
-
 
 
 type GetBuyDeSoFeeBasisPointsResponse struct {
@@ -3465,7 +3480,7 @@ type GlobalState struct {
 }
 
 
-type GroupKeyName [MaxMessagingKeyNameCharacters]byte
+type GroupKeyName [100]byte
 
 
 type HeaderResponse struct {
@@ -3516,15 +3531,15 @@ type HotFeedApprovedPostOp struct {
 
 
 type HotFeedEntry struct {
-	PostHash     *BlockHash
+	PostHash     BlockHash
 	PostHashHex  string
 	HotnessScore uint64
 }
 
 
 type HotFeedInteractionKey struct {
-	InteractionPKID     PKID
-	InteractionPostHash BlockHash
+	InteractionPKID     lib.PKID
+	InteractionPostHash lib.BlockHash
 }
 
 
@@ -3608,6 +3623,7 @@ type InputResponse struct {
 
 
 type InvType uint32
+
 
 
 type InvVect struct {
@@ -4222,6 +4238,7 @@ type MsgDeSoVersion struct {
 type MsgType uint64
 
 
+
 type NFTBidEntry struct {
 	BidderPKID     *PKID
 	NFTPostHash    *BlockHash
@@ -4304,7 +4321,7 @@ type NFTDropEntry struct {
 	IsActive        bool
 	DropNumber      uint64
 	DropTstampNanos uint64
-	NFTHashes       []*BlockHash
+	NFTHashes       []BlockHash
 }
 
 
@@ -4391,6 +4408,7 @@ type NFTTransferTxindexMetadata struct {
 type NetworkType uint64
 
 
+
 type NodeControlRequest struct {
 	// An address in <IP>:<Port> format.
 	Address string `safeForLogging:"true"`
@@ -4448,6 +4466,7 @@ type NodeStatusResponse struct {
 type NotificationType uint8
 
 
+
 type Notifier struct {
 	coreChain *Blockchain
 	postgres  *Postgres
@@ -4461,6 +4480,7 @@ type Notifier struct {
 
 
 type OperationType uint
+
 
 
 type OrphanBlock struct {
@@ -5012,7 +5032,7 @@ type PGTransactionOutput struct {
 }
 
 
-type PKID [33]byte
+type PKID [100]byte
 
 
 type PKIDEntry struct {
@@ -5151,7 +5171,7 @@ type PhoneNumberMetadata struct {
 }
 
 
-type PkMapKey [btcec.PubKeyBytesLenCompressed]byte
+type PkMapKey [100]byte
 
 
 type PostEntry struct {
@@ -5288,7 +5308,7 @@ type PostEntryResponse struct {
 	LikeCount    uint64
 	DiamondCount uint64
 	// Information about the reader's state w/regard to this post (e.g. if they liked it).
-	PostEntryReaderState *PostEntryReaderState
+	PostEntryReaderState PostEntryReaderState
 	InGlobalFeed         *bool `json:",omitempty"`
 	InHotFeed            *bool `json:",omitempty"`
 	// True if this post hash hex is pinned to the global feed.
@@ -5442,7 +5462,7 @@ type ProfileEntryResponse struct {
 }
 
 
-type PublicKey [33]byte
+type PublicKey [100]byte
 
 
 type PublicKeyRoyaltyPair struct {
@@ -5477,7 +5497,7 @@ type QueryETHRPCRequest struct {
 
 type ReferralInfo struct {
 	ReferralHashBase58     string
-	ReferrerPKID           *PKID
+	ReferrerPKID           PKID
 	ReferrerAmountUSDCents uint64
 	RefereeAmountUSDCents  uint64
 	MaxReferrals           uint64 // If set to zero, there is no cap on referrals.
@@ -5525,7 +5545,7 @@ type RegisterMessagingGroupKeyResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 	TxnHashHex        string
 }
@@ -5618,7 +5638,7 @@ type SendDeSoResponse struct {
 	ChangeAmountNanos        uint64
 	FeeNanos                 uint64
 	TransactionIDBase58Check string
-	Transaction              *MsgDeSoTxn
+	Transaction              MsgDeSoTxn
 	TransactionHex           string
 	TxnHashHex               string
 }
@@ -5651,7 +5671,7 @@ type SendDiamondsResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 	TxnHashHex        string
 }
@@ -5696,7 +5716,7 @@ type SendMessageStatelessResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 }
 
@@ -5982,7 +6002,7 @@ type SubmitPostRequest struct {
 	// The parent post or profile. This is used for comments.
 	ParentStakeID string `safeForLogging:"true"`
 	// The body of this post.
-	BodyObj *DeSoBodySchema
+	BodyObj DeSoBodySchema
 
 	// The PostHashHex of the post being reposted
 	RepostedPostHashHex string `safeForLogging:"true"`
@@ -6009,7 +6029,7 @@ type SubmitPostResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 }
 
@@ -6033,7 +6053,7 @@ type SubmitTransactionRequest struct {
 
 
 type SubmitTransactionResponse struct {
-	Transaction *MsgDeSoTxn
+	Transaction MsgDeSoTxn
 	TxnHashHex  string
 
 	// include the PostEntryResponse if a post was submitted
@@ -6050,6 +6070,9 @@ type SummaryStats struct {
 }
 
 
+
+type SwapIdentityOperationType uint8
+
 type SwapIdentityMetadataa struct {
 	// TODO: This is currently only accessible by ParamUpdater. This avoids the
 	// possibility that a user will stomp over another user's profile, and
@@ -6064,9 +6087,6 @@ type SwapIdentityMetadataa struct {
 	// key is *from* and which public key is *to* because it's just a swap.
 	ToPublicKey []byte
 }
-
-
-type SwapIdentityOperationType uint8
 
 
 type SwapIdentityRequest struct {
@@ -6092,7 +6112,7 @@ type SwapIdentityResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 }
 
@@ -6110,6 +6130,7 @@ type SwapIdentityTxindexMetadata struct {
 
 
 type SyncState uint8
+
 
 
 type TXIndex struct {
@@ -6174,6 +6195,9 @@ type TransactionEvent struct {
 }
 
 
+type TransactionEventFunc func(event *TransactionEvent)
+
+
 type TransactionFee struct {
 	// PublicKeyBase58Check is the public key of the user who receives the fee.
 	PublicKeyBase58Check string
@@ -6201,7 +6225,7 @@ type TransactionInfo struct {
 
 	// TODO: Not including the transaction because it causes encoding to
 	// fail due to the presence of an interface for TxnMeta.
-	//Transaction    *MsgDeSoTxn
+	//Transaction    MsgDeSoTxn
 
 	// Unix timestamp (seconds since epoch).
 	TimeAdded int64
@@ -6264,7 +6288,7 @@ type TransactionMetadata struct {
 
 
 type TransactionMetadataResponse struct {
-	Metadata           *TransactionMetadata
+	Metadata           TransactionMetadata
 	TxnOutputResponses []*OutputResponse
 	Txn                *TransactionResponse
 	Index              int64
@@ -6293,7 +6317,7 @@ type TransactionResponse struct {
 	// into the "block" endpoint.
 	BlockHashHex string `json:",omitempty"`
 
-	TransactionMetadata *TransactionMetadata `json:",omitempty"`
+	TransactionMetadata TransactionMetadata `json:",omitempty"`
 
 	// The ExtraData added to this transaction
 	ExtraData map[string]string `json:",omitempty"`
@@ -6325,7 +6349,7 @@ type TransferCreatorCoinResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 	TxnHashHex        string
 }
@@ -6356,7 +6380,7 @@ type TransferDAOCoinResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 	TxnHashHex        string
 }
@@ -6385,12 +6409,13 @@ type TransferNFTResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 }
 
 
 type TransferRestrictionStatus uint8
+
 
 
 type TransferRestrictionStatusString string
@@ -6403,6 +6428,7 @@ type TxnString string
 
 
 type TxnType uint8
+
 
 
 type UTXOEntryResponse struct {
@@ -6490,7 +6516,7 @@ type UpdateGlobalParamsResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 }
 
@@ -6526,7 +6552,7 @@ type UpdateNFTResponse struct {
 	TotalInputNanos   uint64
 	ChangeAmountNanos uint64
 	FeeNanos          uint64
-	Transaction       *MsgDeSoTxn
+	Transaction       MsgDeSoTxn
 	TransactionHex    string
 }
 
@@ -6603,7 +6629,7 @@ type UpdateProfileResponse struct {
 	TotalInputNanos               uint64
 	ChangeAmountNanos             uint64
 	FeeNanos                      uint64
-	Transaction                   *MsgDeSoTxn
+	Transaction                   MsgDeSoTxn
 	TransactionHex                string
 	TxnHashHex                    string
 	CompProfileCreationTxnHashHex string
@@ -6819,7 +6845,7 @@ type UserMetadata struct {
 	IsFeaturedTutorialUpAndComingCreator bool
 
 	TutorialStatus                  TutorialStatus
-	CreatorPurchasedInTutorialPKID  *PKID
+	CreatorPurchasedInTutorialPKID  PKID
 	CreatorCoinsPurchasedInTutorial uint64
 
 	// ReferralHashBase58Check with which user signed up
@@ -6835,7 +6861,7 @@ type UserMetadata struct {
 }
 
 
-type UsernameMapKey [MaxUsernameLengthBytes]byte
+type UsernameMapKey [100]byte
 
 
 type UtxoEntry struct {
@@ -7008,6 +7034,7 @@ type UtxoOperation struct {
 type UtxoType uint8
 
 
+
 type UtxoView struct {
 	// Utxo data
 	NumUtxoEntries              uint64
@@ -7083,10 +7110,10 @@ type VerificationUsernameAuditLog struct {
 	TimestampNanos uint64
 	// Username and PKID of the admin who verified the user.
 	VerifierUsername string
-	VerifierPKID     *PKID
+	VerifierPKID     PKID
 	// The user who was verified or had their verification removed.
 	VerifiedUsername string
-	VerifiedPKID     *PKID
+	VerifiedPKID     PKID
 	// Indicator of whether this request granted verification or removed verification.
 	IsRemoval bool
 }
@@ -7103,7 +7130,7 @@ type VerificationUsernameAuditLogResponse struct {
 
 
 type VerifiedUsernameToPKID struct {
-	VerifiedUsernameToPKID map[string]*PKID
+	VerifiedUsernameToPKID map[string]PKID
 }
 
 
@@ -7250,7 +7277,7 @@ type WyreWalletOrderMetadata struct {
 	DeSoPurchasedNanos uint64
 
 	// BlockHash of the transaction for sending the DeSo
-	BasicTransferTxnBlockHash *BlockHash
+	BasicTransferTxnBlockHash BlockHash
 }
 
 
@@ -7306,3 +7333,5 @@ type WyreWalletOrderWebhookPayload struct {
 	TransferId   string `json:"transferId"`
 	FailedReason string `json:"failedReason"`
 }
+
+type MempoolTxFeeMinHeap []*MempoolTx
