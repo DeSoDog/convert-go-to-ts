@@ -522,7 +522,6 @@ type SubmitPostMetadata struct {
 	// pre-existing post.
 	IsHidden bool
 } 
-type SwapIdentityOperationType uint8
  
 type SwapIdentityOperationType uint8
 
