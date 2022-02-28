@@ -19,17 +19,26 @@ const main = async (): Promise<void> => {
     ...new Set([...structsLib, ...structsRoutes, ...countryTypes]),
   ].map(async (filePromise) => {
     const file = await filePromise;
+
     return getStructs(file[1], false).join(" ");
+
     // return getStructs(await file);
   });
   const blob = await Promise.all(blobPromise);
 
-  writeFile(blob.sort().join(" "));
+  // writeFile(blob.sort().join(" "));
+  const structNames = blob
+    .join(" ")
+    .matchAll(/(?<=type )[A-Za-z]*(?= struct)/gs);
+  const goCommand = [...structNames].map((s) => {
+    return `s.Add(types.${s}{})\n`;
+  });
+  writeFile(goCommand.join(" "), "commands.go");
 };
 main();
-export const writeFile = (file: string) => {
+export const writeFile = (file: string, name: string) => {
   fs.writeFile(
-    `${__dirname}/generated/blob/blob.go`,
+    `${__dirname}/generated/blob/${name}`,
     ["package types", getImports(), file].join("\n\n"),
     (err) => {}
   );

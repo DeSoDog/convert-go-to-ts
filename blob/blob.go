@@ -8,13 +8,12 @@ import (
 	"sync"
 	"testing"
 	"time"
-	chainlib "github.com/btcsuite/btcd/blockchain"
-	muxtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
+
 	"github.com/DataDog/datadog-go/statsd"
 	"github.com/btcsuite/btcd/addrmgr"
+	chainlib "github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/deso-protocol/core/lib"
 	"github.com/deso-protocol/go-deadlock"
@@ -24,6 +23,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/holiman/uint256"
 	"github.com/kevinburke/twilio-go"
+	muxtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
 	"honnef.co/go/tools/config"
 )
 
@@ -919,7 +919,7 @@ type Alpha3CountryCodeDetails struct {
 	Alpha3      string
 } 
 type BitcoinUtxo struct {
-	TxID           *chainhash.Hash
+	TxID           int64
 	Index          int64
 	AmountSatoshis int64
 } 
@@ -1676,7 +1676,6 @@ type BurnNFTMetadata struct {
 	NFTPostHash  *BlockHash
 	SerialNumber uint64
 } 
-type SwapIdentityOperationType uint8
 
 type SwapIdentityMetadataa struct {
 	// TODO: This is currently only accessible by ParamUpdater. This avoids the
@@ -3934,7 +3933,6 @@ type DeSoMempool struct {
 	// txFeeMinHeap organizes transactions stored in poolMap by their FeePerKB. It is used
 	// in order to prevent the pool from exhausing memory due to having to store too
 	// many low-fee transactions.
-	txFeeMinheap MempoolTxFeeMinHeap
 	// totalTxSizeBytes is the total size of all of the transactions stored in poolMap. We
 	// use it to determine when the pool is nearing memory-exhaustion so we can start
 	// evicting transactions.
