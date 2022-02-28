@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getLib = exports.getCountryPackage = exports.getRoutes = void 0;
+exports.getStructFiles = exports.getLib = exports.getCountryPackage = exports.getRoutes = void 0;
 const getRoutes = () => {
     let routes = `admin_buy_deso.go
 Cache reserve exchange rate, buy deso fee basis points, and jumio def…
@@ -294,4 +294,164 @@ In retrospect, it was inevitable
     return [...lib];
 };
 exports.getLib = getLib;
+const getStructFiles = () => {
+    const structs = `admin_buy_deso.go
+added go types and indvidual files
+20 hours ago
+admin_feed.go
+added go types and indvidual files
+20 hours ago
+admin_fees.go
+added go types and indvidual files
+20 hours ago
+admin_jumio.go
+added go types and indvidual files
+20 hours ago
+admin_nft.go
+added go types and indvidual files
+20 hours ago
+admin_node.go
+added go types and indvidual files
+20 hours ago
+admin_referrals.go
+added go types and indvidual files
+20 hours ago
+admin_transaction.go
+added go types and indvidual files
+20 hours ago
+admin_tutorial.go
+added go types and indvidual files
+20 hours ago
+admin_user.go
+added go types and indvidual files
+20 hours ago
+base.go
+added go types and indvidual files
+20 hours ago
+bitcoin_burner.go
+added go types and indvidual files
+20 hours ago
+bitcoin_price.go
+added go types and indvidual files
+20 hours ago
+block_producer.go
+added go types and indvidual files
+20 hours ago
+block_view.go
+added go types and indvidual files
+20 hours ago
+block_view_nft.go
+added go types and indvidual files
+20 hours ago
+block_view_test.go
+added go types and indvidual files
+20 hours ago
+block_view_types.go
+added go types and indvidual files
+20 hours ago
+blockchain.go
+added go types and indvidual files
+20 hours ago
+connection_manager.go
+added go types and indvidual files
+20 hours ago
+constants.go
+added go types and indvidual files
+20 hours ago
+db_utils.go
+added go types and indvidual files
+20 hours ago
+errors.go
+added go types and indvidual files
+20 hours ago
+eth.go
+added go types and indvidual files
+20 hours ago
+event_manager.go
+added go types and indvidual files
+20 hours ago
+exchange.go
+added go types and indvidual files
+20 hours ago
+extra_data_utils.go
+added go types and indvidual files
+20 hours ago
+global_state.go
+added go types and indvidual files
+20 hours ago
+hot_feed.go
+added go types and indvidual files
+20 hours ago
+iso-3166-1-alpha-3-codes.go
+added go types and indvidual files
+20 hours ago
+media.go
+added go types and indvidual files
+20 hours ago
+mempool.go
+added go types and indvidual files
+20 hours ago
+message.go
+added go types and indvidual files
+20 hours ago
+miner.go
+added go types and indvidual files
+20 hours ago
+network.go
+clean up
+20 hours ago
+nft.go
+added go types and indvidual files
+20 hours ago
+nodes.go
+added go types and indvidual files
+20 hours ago
+notifier.go
+added go types and indvidual files
+20 hours ago
+peer.go
+added go types and indvidual files
+20 hours ago
+post.go
+added go types and indvidual files
+20 hours ago
+postgres.go
+added go types and indvidual files
+20 hours ago
+referrals.go
+added go types and indvidual files
+20 hours ago
+server.go
+added go types and indvidual files
+20 hours ago
+shared.go
+added go types and indvidual files
+20 hours ago
+supply.go
+added go types and indvidual files
+20 hours ago
+transaction.go
+added go types and indvidual files
+20 hours ago
+tutorial.go
+added go types and indvidual files
+20 hours ago
+txindex.go
+added go types and indvidual files
+20 hours ago
+types.go
+added go types and indvidual files
+20 hours ago
+user.go
+added go types and indvidual files
+20 hours ago
+verify.go
+added go types and indvidual files
+20 hours ago
+wyre.go
+added go types and indvidual files
+20 hours ago`.matchAll(/[a-z0-9_]+?\.go/gs);
+    return [...structs][0];
+};
+exports.getStructFiles = getStructFiles;
 //# sourceMappingURL=routes.js.map
