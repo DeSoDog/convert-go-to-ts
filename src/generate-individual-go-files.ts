@@ -10,6 +10,7 @@ const main = async (): Promise<void> => {
     "deso-protocol/core/main/lib/",
     getLib()
   );
+
   const countryTypes = await getRawFiles(
     "deso-protocol/backend/main/countries/",
     ["iso-3166-1-alpha-3-codes.go"]
@@ -31,10 +32,9 @@ const main = async (): Promise<void> => {
 main();
 
 export const writeFile = (file: string, fileName: string, index: number) => {
-  // "
-  // fs.writeFile(
-  //   `${__dirname}/generated/${fileName}`,
-  //   ["package types", file].join("\n\n"),
-  //   (err) => {}
-  // );
+  fs.writeFile(
+    `${__dirname}/generated/${fileName}`,
+    ["package types", file].join("\n\n"),
+    (err) => {}
+  );
 };

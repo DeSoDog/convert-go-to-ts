@@ -8,10 +8,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.writeFile = void 0;
 const routes_1 = require("./routes");
 const utils_1 = require("./utils");
+const fs_1 = __importDefault(require("fs"));
 const main = () => __awaiter(void 0, void 0, void 0, function* () {
     const structsRoutes = yield (0, utils_1.getRawFiles)("deso-protocol/backend/main/routes/", (0, routes_1.getRoutes)());
     const structsLib = yield (0, utils_1.getRawFiles)("deso-protocol/core/main/lib/", (0, routes_1.getLib)());
@@ -29,12 +33,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
 });
 main();
 const writeFile = (file, fileName, index) => {
-    // "
-    // fs.writeFile(
-    //   `${__dirname}/generated/${fileName}`,
-    //   ["package types", file].join("\n\n"),
-    //   (err) => {}
-    // );
+    fs_1.default.writeFile(`${__dirname}/generated/${fileName}`, ["package types", file].join("\n\n"), (err) => { });
 };
 exports.writeFile = writeFile;
 //# sourceMappingURL=generate-individual-go-files.js.map

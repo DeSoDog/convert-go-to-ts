@@ -561,6 +561,7 @@ s.Add(types.BitcoinUtxo{})
  s.Add(types.GetWyreWalletOrderForPublicKeyRequest{})
  s.Add(types.GetWyreWalletOrderForPublicKeyResponse{})
  s.Add(types.WyreWalletOrderMetadataResponse{})
+ 
 
 	io.WriteString(w, "// this file was automatically generated, DO NOT EDIT\n")
 	return s.RenderTo(w)
