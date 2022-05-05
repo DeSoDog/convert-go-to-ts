@@ -119,6 +119,7 @@ exports.getCountryPackage = getCountryPackage;
 const getLib = () => {
     const lib = `
   base58.go
+  snapshot.go
 Ln/deso (#118)
 5 months ago
 bitcoin_burner.go

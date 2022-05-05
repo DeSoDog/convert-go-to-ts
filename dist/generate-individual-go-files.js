@@ -22,7 +22,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
     const countryTypes = yield (0, utils_1.getRawFiles)("deso-protocol/backend/main/countries/", ["iso-3166-1-alpha-3-codes.go"]);
     [...new Set([...structsLib, ...structsRoutes, ...countryTypes])].map((file, index) => __awaiter(void 0, void 0, void 0, function* () {
         const [route, fileContents] = yield file;
-        const structs = (0, utils_1.getStructs)(fileContents);
+        const structs = (0, utils_1.getStructs)(fileContents, true);
         if (structs.length) {
             if (route === "mempool.go") {
                 structs.push("type MempoolTxFeeMinHeap []*MempoolTx");
@@ -33,7 +33,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
 });
 main();
 const writeFile = (file, fileName, index) => {
-    fs_1.default.writeFile(`${__dirname}/generated/${fileName}`, ["package types", file].join("\n\n"), (err) => { });
+    fs_1.default.writeFile(`${__dirname}/../generated/individual/${fileName}`, ["package types", file].join("\n\n"), (err) => { });
 };
 exports.writeFile = writeFile;
 //# sourceMappingURL=generate-individual-go-files.js.map

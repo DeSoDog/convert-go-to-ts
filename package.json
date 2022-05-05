@@ -25,7 +25,9 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "blob": "npx tsc && node ./dist/generate-individual-go-files.js"
+    "individual": "npx tsc && node ./dist/generate-individual-go-files.js",
+    "blob": "npx tsc && node ./dist/generate-blob-go-files.js",
+    "convert": "npx tsc && node ./dist/go-to-ts.js"
   },
   "keywords": [],
   "author": "",

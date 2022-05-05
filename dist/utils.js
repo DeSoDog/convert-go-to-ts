@@ -25,7 +25,9 @@ const getStructs = (rawFile, includeImports = true) => {
     const structsUtxo = [...file.matchAll(GET_STRUCT_UTXO)].map((x) => x[0]);
     const structsFunc = [...file.matchAll(GET_STRUCT_FUNC)].map((x) => x[0]);
     const imports = includeImports
-        ? [...file.matchAll(GET_IMPORTS)].map((x) => x[0])
+        ? [...file.matchAll(GET_IMPORTS)]
+            .map((x) => x[0])
+            .map((x) => x.replace(/\t"/gs, '_"'))
         : [];
     const allStructs = [
         ...structsObjects,
