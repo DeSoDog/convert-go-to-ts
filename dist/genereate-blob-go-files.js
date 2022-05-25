@@ -39,7 +39,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
 });
 main();
 const writeFile = (file, name) => {
-    fs_1.default.writeFile(`${__dirname}/generated/blob/${name}`, ["package types", getImports(), file].join("\n\n"), (err) => { });
+    fs_1.default.writeFile(`${__dirname}/../generated/blob/${name}`, ["package types", getImports(), file].join("\n\n"), (err) => { });
 };
 exports.writeFile = writeFile;
 const getImports = () => {

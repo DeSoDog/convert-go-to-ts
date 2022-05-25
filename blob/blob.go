@@ -2734,6 +2734,7 @@ type CommentsPostEntryResponse struct {
 	PostEntryResponse *PostEntryResponse
 	PosterPublicKeyBytes [] byte
 } 
+
 type GetPostsForPublicKeyRequest struct {
 	// Either PublicKeyBase58Check or Username can be set by the client to specify
 	// which user we're obtaining posts for

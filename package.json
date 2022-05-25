@@ -24,7 +24,10 @@
     "typescript": "^4.5.5"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "individual": "npx tsc && node ./dist/generate-individual-go-files.js",
+    "blob": "npx tsc && node ./dist/generate-blob-go-files.js",
+    "convert": "npx tsc && node ./dist/go-to-ts.js"
   },
   "keywords": [],
   "author": "",

@@ -15,6 +15,8 @@ export const getStructs = (
 ): string[] => {
   let file = flattenImportedObjs(rawFile);
   const structsObjects = [...file.matchAll(GET_STRUCT_OBJ)].map((x) => {
+    // console.log(x[0].replace(/uint256\.Int/gs, "string"));
+    // console.log(.replace(/uint256\.Int/gs, "string"))
     return x[0];
   });
 
@@ -27,7 +29,9 @@ export const getStructs = (
   const structsUtxo = [...file.matchAll(GET_STRUCT_UTXO)].map((x) => x[0]);
   const structsFunc = [...file.matchAll(GET_STRUCT_FUNC)].map((x) => x[0]);
   const imports = includeImports
-    ? [...file.matchAll(GET_IMPORTS)].map((x) => x[0])
+    ? [...file.matchAll(GET_IMPORTS)]
+        .map((x) => x[0])
+        .map((x) => x.replace(/\t"/gs, '_"'))
     : [];
   const allStructs = [
     ...structsObjects,

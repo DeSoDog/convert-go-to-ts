@@ -5,6 +5,7 @@ const getRoutes = () => {
     let routes = `admin_buy_deso.go
 Cache reserve exchange rate, buy deso fee basis points, and jumio def…
 29 days ago
+dao_coin_exchange.go
 admin_feed.go
 Seperate out global state into it's own struct in order for it to be … (
 3 months ago
@@ -118,6 +119,7 @@ exports.getCountryPackage = getCountryPackage;
 const getLib = () => {
     const lib = `
   base58.go
+  snapshot.go
 Ln/deso (#118)
 5 months ago
 bitcoin_burner.go
@@ -285,7 +287,6 @@ Return error if error during txindex db update (#220)
 types.go
 create maps for additional royalties when converting to/from PGPostEn…
 19 days ago
-utils.go
 Ln/deso (#118)
 5 months ago
 varint.go
