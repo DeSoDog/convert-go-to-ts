@@ -19,26 +19,31 @@ const main = async (): Promise<void> => {
     ...new Set([...structsLib, ...structsRoutes, ...countryTypes]),
   ].map(async (filePromise) => {
     const file = await filePromise;
-
     return getStructs(file[1], false).join(" ");
   });
   let blob = await Promise.all(blobPromise);
   const structNames = blob
     .join(" ")
     .matchAll(/(?<=type )[A-Za-z]*(?= struct)/gs);
-  const goCommand = [...structNames].map((s) => {
-    return `s.Add(${s}{})\n`;
-  });
+  const goCommand = [...structNames]
+    .filter(
+      (s) =>
+        s.toString().includes("Response") || s.toString().includes("Request")
+    )
+    .map((s) => {
+      return `s.Add(types.${s}{})\n`;
+    });
   writeFile(
     [
-      "package types",
+      "package main",
       getImports(),
 
       getBodyStart(),
       goCommand.join("  "),
       getBodyEnd(),
     ],
-    "go-to-ts.go"
+    "go-to-ts.go",
+    "/../generated/main/"
   );
   writeFile(
     [
@@ -47,16 +52,14 @@ const main = async (): Promise<void> => {
       "type MempoolTxFeeMinHeap []*MempoolTx",
       blob.join(" "),
     ],
-    "blobby.go"
+    "types.go",
+    "/../generated/types/"
   );
 };
+
 main();
-const writeFile = (file: string[], name: string) => {
-  fs.writeFile(
-    `${__dirname}/../generated/blob/${name}`,
-    file.join("\n\n"),
-    (err) => {}
-  );
+const writeFile = (file: string[], name: string, path: string) => {
+  fs.writeFile(`${__dirname}${path}${name}`, file.join("\n\n"), (err) => {});
 };
 
 // types "types/blob"
@@ -78,6 +81,7 @@ const getTypeImports = () => {
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/deso-protocol/core/lib"
+    "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/deso-protocol/go-deadlock"
 	merkletree "github.com/deso-protocol/go-merkle-tree"
 	"github.com/dgraph-io/badger"
@@ -92,8 +96,10 @@ const getTypeImports = () => {
   	"github.com/oleiade/lane"
 	"honnef.co/go/tools/config")`;
 };
+
 const getImports = (): string => {
   return `import (
+	types "types/generated/types"
 	"flag"
 	"io"
 	"log"
@@ -102,6 +108,7 @@ const getImports = (): string => {
 	"github.com/OneOfOne/struct2ts"
 )`;
 };
+
 const getBodyStart = (): string => {
   return `func main() {
 	log.SetFlags(log.Lshortfile)

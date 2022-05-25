@@ -29,26 +29,28 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
     const structNames = blob
         .join(" ")
         .matchAll(/(?<=type )[A-Za-z]*(?= struct)/gs);
-    const goCommand = [...structNames].map((s) => {
-        return `s.Add(${s}{})\n`;
+    const goCommand = [...structNames]
+        .filter((s) => s.toString().includes("Response") || s.toString().includes("Request"))
+        .map((s) => {
+        return `s.Add(types.${s}{})\n`;
     });
     writeFile([
-        "package types",
+        "package main",
         getImports(),
         getBodyStart(),
         goCommand.join("  "),
         getBodyEnd(),
-    ], "go-to-ts.go");
+    ], "go-to-ts.go", "/../generated/main/");
     writeFile([
         "package types",
         getTypeImports(),
         "type MempoolTxFeeMinHeap []*MempoolTx",
         blob.join(" "),
-    ], "blobby.go");
+    ], "types.go", "/../generated/types/");
 });
 main();
-const writeFile = (file, name) => {
-    fs_1.default.writeFile(`${__dirname}/../generated/blob/${name}`, file.join("\n\n"), (err) => { });
+const writeFile = (file, name, path) => {
+    fs_1.default.writeFile(`${__dirname}${path}${name}`, file.join("\n\n"), (err) => { });
 };
 // types "types/blob"
 const getTypeImports = () => {
@@ -69,6 +71,7 @@ const getTypeImports = () => {
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/deso-protocol/core/lib"
+    "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/deso-protocol/go-deadlock"
 	merkletree "github.com/deso-protocol/go-merkle-tree"
 	"github.com/dgraph-io/badger"
@@ -85,6 +88,7 @@ const getTypeImports = () => {
 };
 const getImports = () => {
     return `import (
+	types "types/generated/types"
 	"flag"
 	"io"
 	"log"

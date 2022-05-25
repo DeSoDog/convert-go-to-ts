@@ -15,6 +15,8 @@ export const getStructs = (
 ): string[] => {
   let file = flattenImportedObjs(rawFile);
   const structsObjects = [...file.matchAll(GET_STRUCT_OBJ)].map((x) => {
+    // console.log(x[0].replace(/uint256\.Int/gs, "string"));
+    // console.log(.replace(/uint256\.Int/gs, "string"))
     return x[0];
   });
 

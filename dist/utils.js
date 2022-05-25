@@ -15,6 +15,8 @@ const GET_STRUCT_BYTE = /\ntype[a-zA-Z\s]+?(\[HashSizeBytes\]byte|\[[0-9a-zA-Z\.
 const getStructs = (rawFile, includeImports = true) => {
     let file = (0, exports.flattenImportedObjs)(rawFile);
     const structsObjects = [...file.matchAll(GET_STRUCT_OBJ)].map((x) => {
+        // console.log(x[0].replace(/uint256\.Int/gs, "string"));
+        // console.log(.replace(/uint256\.Int/gs, "string"))
         return x[0];
     });
     const structsInt = [...file.matchAll(GET_STRUCT_INT)].map((x) => x[0]);
